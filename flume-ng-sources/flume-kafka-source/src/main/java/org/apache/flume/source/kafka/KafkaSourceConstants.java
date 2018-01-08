@@ -30,6 +30,7 @@ public class KafkaSourceConstants {
       KAFKA_PREFIX + CommonClientConfigs.BOOTSTRAP_SERVERS_CONFIG;
   public static final String TOPICS = KAFKA_PREFIX + "topics";
   public static final String TOPICS_REGEX = TOPICS + "." + "regex";
+  public static final String TOPICS_PARTITIONS = TOPICS + "." + "topicsPartitions";
   public static final String DEFAULT_AUTO_COMMIT =  "false";
   public static final String BATCH_SIZE = "batchSize";
   public static final String BATCH_DURATION_MS = "batchDurationMillis";
@@ -53,6 +54,7 @@ public class KafkaSourceConstants {
   public static final String KEY_HEADER = "key";
   public static final String TIMESTAMP_HEADER = "timestamp";
   public static final String PARTITION_HEADER = "partition";
+  public static final String OFFSET_HEADER = "offset";
 
   public static final String SET_TOPIC_HEADER = "setTopicHeader";
   public static final boolean DEFAULT_SET_TOPIC_HEADER = true;

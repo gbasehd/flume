@@ -178,6 +178,28 @@ public class KafkaSource extends AbstractPollableSource
     }
   }
 
+  private class TopicsPartionsSubscriber extends Subscriber<List<TopicPartition>> {
+    private List<TopicPartition> topicsPartitionList = new ArrayList<>();
+
+    public TopicsPartionsSubscriber(String commaSeparatedTopicsPartitions) {
+      log.info("topicsPartions : " + commaSeparatedTopicsPartitions);
+      String[] topicsParts = commaSeparatedTopicsPartitions.split("^\\s+|\\s*,\\s*|\\s+$");
+      for (String topicPart : topicsParts) {
+        String[] ss = topicPart.split(":");
+        this.topicsPartitionList.add(new TopicPartition(ss[0], Integer.parseInt(ss[1])));
+      }
+    }
+
+    @Override
+    public void subscribe(KafkaConsumer<?, ?> consumer, SourceRebalanceListener listener) {
+      consumer.assign(topicsPartitionList);
+    }
+
+    @Override
+    public List<TopicPartition> get() {
+      return topicsPartitionList;
+    }
+  }
 
   @Override
   protected Status doProcess() throws EventDeliveryException {
@@ -260,7 +282,10 @@ public class KafkaSource extends AbstractPollableSource
           headers.put(KafkaSourceConstants.PARTITION_HEADER,
               String.valueOf(message.partition()));
         }
-
+        if (!headers.containsKey(KafkaSourceConstants.OFFSET_HEADER)) {
+          headers.put(KafkaSourceConstants.OFFSET_HEADER, 
+              String.valueOf(message.offset()));
+        }
         if (kafkaKey != null) {
           headers.put(KafkaSourceConstants.KEY_HEADER, kafkaKey);
         }
@@ -342,12 +367,16 @@ public class KafkaSource extends AbstractPollableSource
     // See https://issues.apache.org/jira/browse/FLUME-2896
     translateOldProperties(context);
 
-    String topicProperty = context.getString(KafkaSourceConstants.TOPICS_REGEX);
+    String topicProperty = context.getString(KafkaSourceConstants.TOPICS_PARTITIONS);
     if (topicProperty != null && !topicProperty.isEmpty()) {
+      // create subscriber that uses topic and partitions list subscription
+      subscriber = new TopicsPartionsSubscriber(topicProperty);
+    } else if ((topicProperty = context.getString(KafkaSourceConstants.TOPICS_REGEX)) != null
+        && !topicProperty.isEmpty()) {
       // create subscriber that uses pattern-based subscription
       subscriber = new PatternSubscriber(topicProperty);
-    } else if ((topicProperty = context.getString(KafkaSourceConstants.TOPICS)) != null &&
-               !topicProperty.isEmpty()) {
+    } else if ((topicProperty = context.getString(KafkaSourceConstants.TOPICS)) != null
+        && !topicProperty.isEmpty()) {
       // create subscriber that uses topic list subscription
       subscriber = new TopicListSubscriber(topicProperty);
     } else if (subscriber == null) {
