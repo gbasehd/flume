@@ -182,7 +182,7 @@ public class KafkaSource extends AbstractPollableSource
     private List<TopicPartition> topicsPartitionList = new ArrayList<>();
 
     public TopicsPartionsSubscriber(String commaSeparatedTopicsPartitions) {
-      log.info("topicsPartions : " + commaSeparatedTopicsPartitions);
+      log.info("topics.partions : {}", commaSeparatedTopicsPartitions);
       String[] topicsParts = commaSeparatedTopicsPartitions.split("^\\s+|\\s*,\\s*|\\s+$");
       for (String topicPart : topicsParts) {
         String[] ss = topicPart.split(":");
@@ -289,16 +289,25 @@ public class KafkaSource extends AbstractPollableSource
         if (kafkaKey != null) {
           headers.put(KafkaSourceConstants.KEY_HEADER, kafkaKey);
         }
-
+        if (log.isDebugEnabled()) {
+          log.debug("Topic: {} Partition: {} Offset: {} Message: {}", new String[]{
+              message.topic(),
+              String.valueOf(message.partition()),
+              String.valueOf(message.offset()),
+              new String(eventBody)
+          });
+        }
+        
         if (log.isTraceEnabled()) {
           if (LogPrivacyUtil.allowLogRawData()) {
-            log.trace("Topic: {} Partition: {} Message: {}", new String[]{
+            log.trace("Topic: {} Partition: {} Offset: {} Message: {}", new String[]{
                 message.topic(),
                 String.valueOf(message.partition()),
+                String.valueOf(message.offset()),
                 new String(eventBody)
             });
           } else {
-            log.trace("Topic: {} Partition: {} Message arrived.",
+            log.trace("Topic: {} Partition: {} Offset: {} Message arrived.",
                 message.topic(),
                 String.valueOf(message.partition()));
           }
@@ -366,7 +375,7 @@ public class KafkaSource extends AbstractPollableSource
     // can be removed in the next release
     // See https://issues.apache.org/jira/browse/FLUME-2896
     translateOldProperties(context);
-
+    
     String topicProperty = context.getString(KafkaSourceConstants.TOPICS_PARTITIONS);
     if (topicProperty != null && !topicProperty.isEmpty()) {
       // create subscriber that uses topic and partitions list subscription
