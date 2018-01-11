@@ -30,7 +30,7 @@ public class KafkaSourceConstants {
       KAFKA_PREFIX + CommonClientConfigs.BOOTSTRAP_SERVERS_CONFIG;
   public static final String TOPICS = KAFKA_PREFIX + "topics";
   public static final String TOPICS_REGEX = TOPICS + "." + "regex";
-  public static final String TOPICS_PARTITIONS = TOPICS + "." + "topicsPartitions";
+  public static final String TOPICS_PARTITIONS = TOPICS + "." + "partitions";
   public static final String DEFAULT_AUTO_COMMIT =  "false";
   public static final String BATCH_SIZE = "batchSize";
   public static final String BATCH_DURATION_MS = "batchDurationMillis";
