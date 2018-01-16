@@ -22,6 +22,10 @@ import com.google.common.base.Preconditions;
 import com.google.gson.Gson;
 import com.google.gson.JsonSyntaxException;
 import java.io.UnsupportedEncodingException;
+import java.sql.Date;
+import java.sql.Timestamp;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -187,6 +191,14 @@ public class HeaderToBodyInterceptor implements Interceptor {
           objValue = Float.parseFloat(value);
         } else if (itemType.equalsIgnoreCase("double")) {
           objValue = Double.parseDouble(value);
+        } else if (itemType.equalsIgnoreCase("timestamp")) {
+          Timestamp time = new Timestamp(Long.parseLong(value));
+          objValue = time.toString();
+        } else if (itemType.equalsIgnoreCase("date")) {
+          Date date = new Date(Long.parseLong(value));
+          //DateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");  
+          //objValue = sdf.format(date);
+          objValue = date.toString();
         } else {
           objValue = value;
         }
