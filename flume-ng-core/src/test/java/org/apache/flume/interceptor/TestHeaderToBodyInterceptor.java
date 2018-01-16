@@ -129,4 +129,54 @@ public class TestHeaderToBodyInterceptor {
     
     Assert.assertArrayEquals(expected.getBody(), actual.getBody());
   }
+  
+  @Test
+  public void testBasicJsonHeaderToBodyTimestamp() throws Exception {
+    Context context = new Context();
+    context.put("bodyType", "json");
+    context.put("headerToBody", "flume_timestamp:timestamp:flume_timestamp");
+    fixtureBuilder.configure(context);
+    Interceptor fixture = fixtureBuilder.build();
+    
+    Event event = EventBuilder.withBody("{\"id\":\"1111111111\",\"name\":\"jack\"}",
+        Charsets.UTF_8);
+    event.getHeaders().put("flume_timestamp", "1357872222598");
+
+    Event actual = fixture.intercept(event);
+    Map<String, Object> actualPayloadMap = gson.fromJson(new String(actual.getBody(), "utf-8"),
+        Map.class);
+
+    Event expected = EventBuilder.withBody(
+        "{\"id\":\"1111111111\",\"name\":\"jack\",\"flume_timestamp\":\"2013-01-11 10:43:42.598\"}",
+        Charsets.UTF_8);
+    Map<String, Object> expectedPayloadMap = gson.fromJson(new String(expected.getBody(), "utf-8"),
+        Map.class);
+    
+    Assert.assertTrue(actualPayloadMap.equals(expectedPayloadMap));
+  }
+  
+  @Test
+  public void testBasicJsonHeaderToBodyDate() throws Exception {
+    Context context = new Context();
+    context.put("bodyType", "json");
+    context.put("headerToBody", "flume_timestamp:date:flume_time");
+    fixtureBuilder.configure(context);
+    Interceptor fixture = fixtureBuilder.build();
+    
+    Event event = EventBuilder.withBody("{\"id\":\"1111111111\",\"name\":\"jack\"}",
+        Charsets.UTF_8);
+    event.getHeaders().put("flume_timestamp", "1357872222598");
+
+    Event actual = fixture.intercept(event);
+    Map<String, Object> actualPayloadMap = gson.fromJson(new String(actual.getBody(), "utf-8"),
+        Map.class);
+
+    Event expected = EventBuilder.withBody(
+        "{\"id\":\"1111111111\",\"name\":\"jack\",\"flume_time\":\"2013-01-11\"}",
+        Charsets.UTF_8);
+    Map<String, Object> expectedPayloadMap = gson.fromJson(new String(expected.getBody(), "utf-8"),
+        Map.class);
+    
+    Assert.assertTrue(actualPayloadMap.equals(expectedPayloadMap));
+  }
 }
