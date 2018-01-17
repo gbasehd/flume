@@ -20,7 +20,14 @@ package org.apache.flume.interceptor;
 
 import com.google.common.base.Preconditions;
 import com.google.gson.Gson;
+import com.google.gson.JsonSyntaxException;
+import java.io.UnsupportedEncodingException;
+import java.sql.Date;
+import java.sql.Timestamp;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import org.apache.flume.Context;
@@ -29,57 +36,21 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Interceptor that extracts matches using a specified regular expression and
- * appends the matches to the event headers using the specified serializers</p>
- * Note that all regular expression matching occurs through Java's built in
- * java.util.regex package</p>. Properties:
- * regex: The regex to use
- * serializers: Specifies the group the serializer will be applied to, and the
- * name of the header that will be added. If no serializer is specified for a
- * group the default {@link RegexExtractorInterceptorPassThroughSerializer} will
- * be used
- * Sample config:
- * agent.sources.r1.channels = c1
- * agent.sources.r1.type = SEQ
- * agent.sources.r1.interceptors = i1
- * agent.sources.r1.interceptors.i1.type = REGEX_EXTRACTOR
- * agent.sources.r1.interceptors.i1.regex = (WARNING)|(ERROR)|(FATAL)
- * <p>
- * agent.sources.r1.interceptors.i1.serializers = s1 s2
- * agent.sources.r1.interceptors.i1.serializers.s1.type = com.blah.SomeSerializer
- * agent.sources.r1.interceptors.i1.serializers.s1.name = warning
- * agent.sources.r1.interceptors.i1.serializers.s2.type =
- *     org.apache.flume.interceptor.RegexExtractorInterceptorTimestampSerializer
- * agent.sources.r1.interceptors.i1.serializers.s2.name = error
- * agent.sources.r1.interceptors.i1.serializers.s2.dateFormat = yyyy-MM-dd
- * </p>
+ * Interceptor that inserts into event body from event header.
  * <pre>
- * Example 1:
- * </p>
- * EventBody: 1:2:3.4foobar5</p> Configuration:
- * agent.sources.r1.interceptors.i1.regex = (\\d):(\\d):(\\d)
- * </p>
- * agent.sources.r1.interceptors.i1.serializers = s1 s2 s3
- * agent.sources.r1.interceptors.i1.serializers.s1.name = one
- * agent.sources.r1.interceptors.i1.serializers.s2.name = two
- * agent.sources.r1.interceptors.i1.serializers.s3.name = three
- * </p>
+ * Example:
+ * EventHeader:{topic=>hive,partition=>0}
+ * EventBody:{"uuid":"35F0AAE45398F5BCE97B95A049DDA7AF"}</p> Configuration:
+ * agent.sources.k.interceptors = htb
+ * agent.sources.k.interceptors.htb.type = 
+ * org.apache.flume.interceptor.HeaderToBodyInterceptor$Builder
+ * agent.sources.k.interceptors.htb.bodyType = json
+ * agent.sources.k.interceptors.htb.headerToBody = topic:string:topic,partition:int:part
  * results in an event with the the following
  *
- * body: 1:2:3.4foobar5 headers: one=>1, two=>2, three=3
+ * body: {"uuid":"35F0AAE45398F5BCE97B95A049DDA7AF",
+ * "topic":"hive","partition":0} 
  *
- * Example 2:
- *
- * EventBody: 1:2:3.4foobar5
- *
- * Configuration: agent.sources.r1.interceptors.i1.regex = (\\d):(\\d):(\\d)
- * agent.sources.r1.interceptors.i1.serializers = s1 s2
- * agent.sources.r1.interceptors.i1.serializers.s1.name = one
- * agent.sources.r1.interceptors.i1.serializers.s2.name = two
- *
- * results in an event with the the following
- *
- * body: 1:2:3.4foobar5 headers: one=>1, two=>2
  * </pre>
  */
 public class HeaderToBodyInterceptor implements Interceptor {
@@ -87,11 +58,14 @@ public class HeaderToBodyInterceptor implements Interceptor {
   private static final Logger log = LoggerFactory.getLogger(HeaderToBodyInterceptor.class);
   private static Gson gson = new Gson();
 
-  String bodyType = null;
-  List<String[]> headerToBodyList = null;
+  private String bodyType = null;
+  private String bodyCharset = null;
+  private List<String[]> headerToBodyList = null;
 
-  public HeaderToBodyInterceptor(String bodyType, List<String[]> headerToBodyList) {
+  public HeaderToBodyInterceptor(String bodyType, List<String[]> headerToBodyList,
+      String bodyCharset) {
     this.bodyType = bodyType;
+    this.bodyCharset = bodyCharset;
     this.headerToBodyList = headerToBodyList;
   }
 
@@ -113,26 +87,26 @@ public class HeaderToBodyInterceptor implements Interceptor {
   public Event intercept(Event event) {
 
     if (this.bodyType != null && !this.bodyType.isEmpty()) {
-      byte[] newBody = null;
       
       if (log.isDebugEnabled()) {
         log.debug("bodyType : " + this.bodyType);
-        log.debug("headerToBody : " + this.headerToBodyList.toString());
-        log.debug("old event : " + event.toString());
+        log.debug("headerToBody : " + Arrays.deepToString(this.headerToBodyList.toArray()));
+        log.debug("old event : " + new String(event.getBody()));
       }
       
-      if (this.bodyType.compareToIgnoreCase("json") == 0) {
+      
+      byte[] newBody = null;
+      if (this.bodyType.equalsIgnoreCase("json")) {
         newBody = headerToBodyJson(event.getHeaders(), event.getBody());
-      } else if (this.bodyType.compareToIgnoreCase("csv") == 0) {
+      } else if (this.bodyType.equalsIgnoreCase("csv")) {
         newBody = headerToBodyCsv(event.getHeaders(), event.getBody());
       } else {
         newBody = event.getBody();
       }
-      
       event.setBody(newBody);
       
       if (log.isDebugEnabled()) {
-        log.debug("new event : " + event.toString());
+        log.debug("new event : " + new String(event.getBody()));
       }
     }
 
@@ -140,57 +114,106 @@ public class HeaderToBodyInterceptor implements Interceptor {
   }
 
   private byte[] headerToBodyCsv(Map<String, String> headers, byte[] body) {
-    StringBuilder payload = new StringBuilder(body.toString());
-
+    
+    String[] array = new String(body).split(",");
+    ArrayList<String> arrayList = new ArrayList<String>(Arrays.asList(array));
+    
     for (String[] item : this.headerToBodyList) {
       String itemHeader = item[0];
-      String itemType = item[1];
-      // String itemBody = item[2];
-
-      if (itemType.isEmpty() || itemType == "string") {
-        payload.append("," + headers.get(itemHeader));
-      } else if (itemType == "int") {
-        payload.append("," + Integer.parseInt(headers.get(itemHeader)));
-      } else if (itemType == "long") {
-        payload.append("," + Long.parseLong(headers.get(itemHeader)));
-      } else if (itemType == "float") {
-        payload.append("," + Float.parseFloat(headers.get(itemHeader)));
-      } else if (itemType == "double") {
-        payload.append("," + Double.parseDouble(headers.get(itemHeader)));
+      //String itemType = item[1];
+      String itemBody = item[2];
+      String value;
+      if (!headers.containsKey(itemHeader)) {
+        log.warn(itemHeader + " isn't in EventHeader");
+        value = "";
       } else {
-        payload.append("," + headers.get(itemHeader));
+        value = headers.get(itemHeader);
+        log.debug("value of header {}: {}", itemHeader, value);
       }
+      
+      int itemPos = Integer.parseInt(itemBody);
+      arrayList.add(itemPos, value);
     }
-
-    return payload.toString().getBytes();
+    StringBuilder payload = new StringBuilder();
+    for (String str : arrayList) {
+      payload.append(str).append(",");
+    }
+    payload.deleteCharAt(payload.length() - 1);
+    
+    byte[] newBody = null;
+    try {
+      newBody = payload.toString().getBytes(this.bodyCharset);
+    } catch (UnsupportedEncodingException e) {
+      log.error("csv to bytes error : {}", e);
+    }
+    return newBody;
   }
 
+  @SuppressWarnings("unchecked")
   private byte[] headerToBodyJson(Map<String, String> headers, byte[] body) {
 
-    @SuppressWarnings("unchecked")
-    Map<String, Object> payloadMap = gson.fromJson(new String(body), Map.class);
-
+    Map<String, Object> payloadMap;
+    try {
+      payloadMap = gson.fromJson(new String(body, this.bodyCharset), Map.class);
+    } catch (JsonSyntaxException | UnsupportedEncodingException e) {
+      log.error("json from body error : {}", e);
+      return null;
+    }
+    if (log.isDebugEnabled()) {
+      log.debug("payloadMap: {}",payloadMap.toString());
+      log.debug("header: {}",headers.toString());
+    }
+    
     for (String[] item : this.headerToBodyList) {
       String itemHeader = item[0];
       String itemType = item[1];
       String itemBody = item[2];
-
-      if (itemType.isEmpty() || itemType == "string") {
-        payloadMap.put(itemBody, headers.get(itemHeader));
-      } else if (itemType == "int") {
-        payloadMap.put(itemBody, Integer.parseInt(headers.get(itemHeader)));
-      } else if (itemType == "long") {
-        payloadMap.put(itemBody, Long.parseLong(headers.get(itemHeader)));
-      } else if (itemType == "float") {
-        payloadMap.put(itemBody, Float.parseFloat(headers.get(itemHeader)));
-      } else if (itemType == "double") {
-        payloadMap.put(itemBody, Double.parseDouble(headers.get(itemHeader)));
-      } else {
-        payloadMap.put(itemBody, headers.get(itemHeader));
+      
+      log.debug("itemHeader: {} itemType: {} itemBody: {}",
+          new String[] {itemHeader,itemType,itemBody});
+      
+      Object objValue = null;
+      try {
+        if (!headers.containsKey(itemHeader)) {
+          log.warn(itemHeader + " isn't in EventHeader");
+          continue;
+        }
+        String value = headers.get(itemHeader);
+        log.debug("value of header {}: {}", new String[] {itemHeader, value});
+        
+        if (itemType.isEmpty() || itemType.equalsIgnoreCase("string")) {
+          objValue = value;
+        } else if (itemType.equalsIgnoreCase("int")) {
+          objValue = Integer.parseInt(value);
+        } else if (itemType.equalsIgnoreCase("long")) {
+          objValue = Long.parseLong(value);
+        } else if (itemType.equalsIgnoreCase("float")) {
+          objValue = Float.parseFloat(value);
+        } else if (itemType.equalsIgnoreCase("double")) {
+          objValue = Double.parseDouble(value);
+        } else if (itemType.equalsIgnoreCase("timestamp")) {
+          Timestamp time = new Timestamp(Long.parseLong(value));
+          objValue = time.toString();
+        } else if (itemType.equalsIgnoreCase("date")) {
+          Date date = new Date(Long.parseLong(value));
+          //DateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");  
+          //objValue = sdf.format(date);
+          objValue = date.toString();
+        } else {
+          objValue = value;
+        }
+        payloadMap.put(itemBody, objValue);
+      } catch (Exception e) {
+        log.error("headerToBodyJson, {}", e);
       }
     }
-
-    return gson.toJson(payloadMap).getBytes();
+    byte[] newBody = null;
+    try {
+      newBody = gson.toJson(payloadMap).getBytes(this.bodyCharset);
+    } catch (UnsupportedEncodingException e) {
+      log.error("json to bytes error : {}", e);
+    }
+    return newBody;
   }
 
   @Override
@@ -204,30 +227,34 @@ public class HeaderToBodyInterceptor implements Interceptor {
    */
   public static class Builder implements Interceptor.Builder {
     private String bodyType = null;
+    private String bodyCharset = null;
     private List<String[]> headerToBodyList = new ArrayList<>();
     static final String HEADER_TO_BODY = "headerToBody";
     static final String BODY_TYPE = "bodyType";
-
+    static final String BODY_CHARSET = "bodyCharset";
+    
     @Override
     public Interceptor build() {
-      if (log.isDebugEnabled()) {
-        log.debug("Creating HeaderToBodyInterceptor with: " + headerToBodyList.toString());
-      }
-      return new HeaderToBodyInterceptor(bodyType, headerToBodyList);
+      log.debug("Creating HeaderToBodyInterceptor with: bodyTpye : {} bodyCharset : {}", bodyType,
+          bodyCharset);
+      log.debug("headerToBodyList : {}", Arrays.deepToString(headerToBodyList.toArray()));
+      return new HeaderToBodyInterceptor(bodyType, headerToBodyList,bodyCharset);
     }
 
     @Override
     public void configure(final Context context) {
-      bodyType = context.getString(BODY_TYPE);
-
+      bodyType = context.getString(BODY_TYPE,"");
+      bodyCharset = context.getString(BODY_CHARSET, "utf-8");
+      log.debug("bodyType : {}",bodyType);
       if (bodyType != null && !bodyType.isEmpty()) {
-        Preconditions.checkArgument((bodyType.compareToIgnoreCase("json") != 0)
-            || (bodyType.compareToIgnoreCase("csv") != 0), "body type isn't json or csv");
-        String[] headerToBodys = context.getString(HEADER_TO_BODY).split(",");
+        Preconditions.checkArgument(bodyType.equalsIgnoreCase("json")
+            || bodyType.equalsIgnoreCase("csv"), "body type isn't json or csv");
+      
+        String[] headerToBodys = context.getString(HEADER_TO_BODY,"").split(",");      
         for (String item : headerToBodys) {
           String[] headerToBody = item.split(":");
-          Preconditions.checkArgument(headerToBody.length != 2,
-              "Must supply a valid  string, like headerTopic:string:bodyTopic");
+          Preconditions.checkArgument(headerToBody.length == 3,
+              "headerToBody must be three fields, like headerTopic:string:bodyTopic");
           headerToBodyList.add(headerToBody);
         }
       }
