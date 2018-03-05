@@ -307,5 +307,10 @@ public class HTTPSource extends AbstractSource implements
             throws IOException {
       doPost(request, response);
     }
+    @Override
+    public void doPut(HttpServletRequest request, HttpServletResponse response)
+            throws IOException {
+      doPost(request, response);
+    }
   }
 }
