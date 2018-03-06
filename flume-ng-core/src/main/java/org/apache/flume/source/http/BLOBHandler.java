@@ -73,6 +73,11 @@ public class BLOBHandler implements HTTPSourceHandler {
       }
       headers.put(parameter, value);
     }
+    String charset = request.getCharacterEncoding();
+    headers.put("charset", charset);
+    
+    String contextPath = request.getContextPath();
+    headers.put("contextPath", contextPath);
 
     for (String header : mandatoryHeaders) {
       Preconditions.checkArgument(headers.containsKey(header),
