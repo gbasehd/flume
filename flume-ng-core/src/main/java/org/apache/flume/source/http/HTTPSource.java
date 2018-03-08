@@ -311,8 +311,8 @@ public class HTTPSource extends AbstractSource implements
     public void doPut(HttpServletRequest request, HttpServletResponse response)
             throws IOException {
       doPost(request, response);
-      if(response.getStatus()==HttpServletResponse.SC_OK) {
-    	  response.setStatus(HttpServletResponse.SC_CREATED);
+      if (response.getStatus() == HttpServletResponse.SC_OK) {
+        response.setStatus(HttpServletResponse.SC_CREATED);
       }
     }
   }
