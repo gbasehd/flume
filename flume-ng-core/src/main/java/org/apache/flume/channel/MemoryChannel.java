@@ -80,7 +80,7 @@ public class MemoryChannel extends BasicChannelSemantics {
       channelCounter.incrementEventPutAttemptCount();
       int eventByteSize = (int) Math.ceil(estimateEventSize(event) / byteCapacitySlotSize);
 
-      if (!putList.offer(event,putTimeout,TimeUnit.MILLISECONDS)) {
+      if (!putList.offer(event)) {
         throw new ChannelException(
             "Put queue for MemoryTransaction of capacity " +
             putList.size() + " full, consider committing more frequently, " +
@@ -203,7 +203,6 @@ public class MemoryChannel extends BasicChannelSemantics {
   // maximum items in a transaction queue
   private volatile Integer transCapacity;
   private volatile int keepAlive;
-  private volatile int putTimeout;
   private volatile int byteCapacity;
   private volatile int lastByteCapacity;
   private volatile int byteCapacityBufferPercentage;
@@ -277,12 +276,6 @@ public class MemoryChannel extends BasicChannelSemantics {
       keepAlive = context.getInteger("keep-alive", defaultKeepAlive);
     } catch (NumberFormatException e) {
       keepAlive = defaultKeepAlive;
-    }
-
-    try {
-      keepAlive = context.getInteger("put-timeout", defaultPutTimeout);
-    } catch (NumberFormatException e) {
-      putTimeout = defaultPutTimeout;
     }
 
     if (queue != null) {
