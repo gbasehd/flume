@@ -307,5 +307,49 @@ public class HTTPSource extends AbstractSource implements
             throws IOException {
       doPost(request, response);
     }
+    @Override
+    public void doPut(HttpServletRequest request, HttpServletResponse response)
+            throws IOException {
+      List<Event> events = Collections.emptyList(); //create empty list
+      try {
+        events = handler.getEvents(request);
+      } catch (HTTPBadRequestException ex) {
+        LOG.warn("Received bad request from client. ", ex);
+        response.sendError(HttpServletResponse.SC_BAD_REQUEST,
+                "Bad request from client. "
+                + ex.getMessage());
+        return;
+      } catch (Exception ex) {
+        LOG.warn("Deserializer threw unexpected exception. ", ex);
+        response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR,
+                "Deserializer threw unexpected exception. "
+                + ex.getMessage());
+        return;
+      }
+      sourceCounter.incrementAppendBatchReceivedCount();
+      sourceCounter.addToEventReceivedCount(events.size());
+      try {
+        getChannelProcessor().processEventBatch(events);
+      } catch (ChannelException ex) {
+        LOG.warn("Error appending event to channel. "
+                + "Channel might be full. Consider increasing the channel "
+                + "capacity or make sure the sinks perform faster.", ex);
+        response.sendError(HttpServletResponse.SC_SERVICE_UNAVAILABLE,
+                "Error appending event to channel. Channel might be full."
+                + ex.getMessage());
+        return;
+      } catch (Exception ex) {
+        LOG.warn("Unexpected error appending event to channel. ", ex);
+        response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR,
+                "Unexpected error while appending event to channel. "
+                + ex.getMessage());
+        return;
+      }
+      response.setCharacterEncoding(request.getCharacterEncoding());
+      response.setStatus(HttpServletResponse.SC_CREATED);
+      response.flushBuffer();
+      sourceCounter.incrementAppendBatchAcceptedCount();
+      sourceCounter.addToEventAcceptedCount(events.size());
+    }
   }
 }
