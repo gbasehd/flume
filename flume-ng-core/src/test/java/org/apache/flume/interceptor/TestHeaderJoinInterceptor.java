@@ -107,8 +107,6 @@ public class TestHeaderJoinInterceptor {
   @Test
   public void testPreserve() throws ClassNotFoundException,
       InstantiationException, IllegalAccessException {
-    Interceptor.Builder builder = InterceptorBuilderFactory.newInstance(
-        InterceptorType.STATIC.toString());
     Context ctx = new Context();
     ctx.put(Constants.PRESERVE, "true");
     ctx.put(Constants.JOIN_KEY_DEFAULT_VALUES, "replacement+value");
