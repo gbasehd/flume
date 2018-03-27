@@ -76,8 +76,7 @@ public class HeaderJoinInterceptor implements Interceptor {
   private HeaderJoinInterceptor(String joinKeys, String joinKeyDefaultValues,
           String joinDelimiter, boolean preserveExisting,
           String key) {
-    this.joinKeys = (joinKeys == null || joinKeys.isEmpty())
-      ? new String[]{ key } : joinKeys.split(" ");
+    this.joinKeys = joinKeys.split(" ");
     this.joinKeyDefaultValues = joinKeyDefaultValues.split(" ");
     this.joinDelimiter = joinDelimiter;
     this.preserveExisting = preserveExisting;
@@ -162,7 +161,7 @@ public class HeaderJoinInterceptor implements Interceptor {
 
   public static class Constants {
     public static final String JOIN_KEYS = "joinKeys";
-    public static final String JOIN_KEYS_DEFAULT = null;
+    public static final String JOIN_KEYS_DEFAULT = "key";
     
     public static final String JOIN_KEY_DEFAULT_VALUES = "joinKeyDefaultValues";
     public static final String JOIN_KEY_DEFAULT_VALUES_DEFAULT = "NA";
