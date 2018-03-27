@@ -28,7 +28,8 @@ public enum InterceptorType {
   REGEX_EXTRACTOR(org.apache.flume.interceptor.RegexExtractorInterceptor.Builder.class),
   REMOVE_HEADER(org.apache.flume.interceptor.RemoveHeaderInterceptor.Builder.class),
   SEARCH_REPLACE(org.apache.flume.interceptor.SearchAndReplaceInterceptor.Builder.class),
-  HEADER_TO_BODY(org.apache.flume.interceptor.HeaderToBodyInterceptor.Builder.class);
+  HEADER_TO_BODY(org.apache.flume.interceptor.HeaderToBodyInterceptor.Builder.class),
+  HEADER_SPLIT(org.apache.flume.interceptor.HeaderSplitInterceptor.Builder.class);
   
   private final Class<? extends Interceptor.Builder> builderClass;
 
