@@ -57,8 +57,10 @@ import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.clients.consumer.OffsetAndMetadata;
 import org.apache.kafka.common.PartitionInfo;
 import org.apache.kafka.common.TopicPartition;
-import org.apache.kafka.common.protocol.SecurityProtocol;
+import org.apache.kafka.common.security.auth.SecurityProtocol;
 import org.apache.kafka.common.security.JaasUtils;
+import kafka.client.ClientUtils;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -66,7 +68,7 @@ import com.google.common.base.Optional;
 import scala.Option;
 
 import static org.apache.flume.source.kafka.KafkaSourceConstants.*;
-import static scala.collection.JavaConverters.asJavaListConverter;
+import static scala.collection.JavaConverters.*;
 
 /**
  * A Source for Kafka which reads messages from kafka topics.
@@ -178,6 +180,28 @@ public class KafkaSource extends AbstractPollableSource
     }
   }
 
+  private class TopicsPartionsSubscriber extends Subscriber<List<TopicPartition>> {
+    private List<TopicPartition> topicsPartitionList = new ArrayList<>();
+
+    public TopicsPartionsSubscriber(String commaSeparatedTopicsPartitions) {
+      log.info("topics.partions : {}", commaSeparatedTopicsPartitions);
+      String[] topicsParts = commaSeparatedTopicsPartitions.split("^\\s+|\\s*,\\s*|\\s+$");
+      for (String topicPart : topicsParts) {
+        String[] ss = topicPart.split(":");
+        this.topicsPartitionList.add(new TopicPartition(ss[0], Integer.parseInt(ss[1])));
+      }
+    }
+
+    @Override
+    public void subscribe(KafkaConsumer<?, ?> consumer, SourceRebalanceListener listener) {
+      consumer.assign(topicsPartitionList);
+    }
+
+    @Override
+    public List<TopicPartition> get() {
+      return topicsPartitionList;
+    }
+  }
 
   @Override
   protected Status doProcess() throws EventDeliveryException {
@@ -260,20 +284,32 @@ public class KafkaSource extends AbstractPollableSource
           headers.put(KafkaSourceConstants.PARTITION_HEADER,
               String.valueOf(message.partition()));
         }
-
+        if (!headers.containsKey(KafkaSourceConstants.OFFSET_HEADER)) {
+          headers.put(KafkaSourceConstants.OFFSET_HEADER, 
+              String.valueOf(message.offset()));
+        }
         if (kafkaKey != null) {
           headers.put(KafkaSourceConstants.KEY_HEADER, kafkaKey);
         }
-
+        if (log.isDebugEnabled()) {
+          log.debug("Topic: {} Partition: {} Offset: {} Message: {}", new String[]{
+              message.topic(),
+              String.valueOf(message.partition()),
+              String.valueOf(message.offset()),
+              new String(eventBody)
+          });
+        }
+        
         if (log.isTraceEnabled()) {
           if (LogPrivacyUtil.allowLogRawData()) {
-            log.trace("Topic: {} Partition: {} Message: {}", new String[]{
+            log.trace("Topic: {} Partition: {} Offset: {} Message: {}", new String[]{
                 message.topic(),
                 String.valueOf(message.partition()),
+                String.valueOf(message.offset()),
                 new String(eventBody)
             });
           } else {
-            log.trace("Topic: {} Partition: {} Message arrived.",
+            log.trace("Topic: {} Partition: {} Offset: {} Message arrived.",
                 message.topic(),
                 String.valueOf(message.partition()));
           }
@@ -341,13 +377,17 @@ public class KafkaSource extends AbstractPollableSource
     // can be removed in the next release
     // See https://issues.apache.org/jira/browse/FLUME-2896
     translateOldProperties(context);
-
-    String topicProperty = context.getString(KafkaSourceConstants.TOPICS_REGEX);
+    
+    String topicProperty = context.getString(KafkaSourceConstants.TOPICS_PARTITIONS);
     if (topicProperty != null && !topicProperty.isEmpty()) {
+      // create subscriber that uses topic and partitions list subscription
+      subscriber = new TopicsPartionsSubscriber(topicProperty);
+    } else if ((topicProperty = context.getString(KafkaSourceConstants.TOPICS_REGEX)) != null
+        && !topicProperty.isEmpty()) {
       // create subscriber that uses pattern-based subscription
       subscriber = new PatternSubscriber(topicProperty);
-    } else if ((topicProperty = context.getString(KafkaSourceConstants.TOPICS)) != null &&
-               !topicProperty.isEmpty()) {
+    } else if ((topicProperty = context.getString(KafkaSourceConstants.TOPICS)) != null
+        && !topicProperty.isEmpty()) {
       // create subscriber that uses topic list subscription
       subscriber = new TopicListSubscriber(topicProperty);
     } else if (subscriber == null) {
@@ -464,8 +504,8 @@ public class KafkaSource extends AbstractPollableSource
     ZkUtils zkUtils = ZkUtils.apply(zookeeperConnect, ZK_SESSION_TIMEOUT, ZK_CONNECTION_TIMEOUT,
         JaasUtils.isZkSecurityEnabled());
     try {
-      List<BrokerEndPoint> endPoints =
-          asJavaListConverter(zkUtils.getAllBrokerEndPointsForChannel(securityProtocol)).asJava();
+      List<BrokerEndPoint> endPoints = seqAsJavaListConverter(
+                    ClientUtils.getPlaintextBrokerEndPoints(zkUtils)).asJava();
       List<String> connections = new ArrayList<>();
       for (BrokerEndPoint endPoint : endPoints) {
         connections.add(endPoint.connectionString());
@@ -597,7 +637,7 @@ public class KafkaSource extends AbstractPollableSource
                                                                      String topicStr) {
     Map<TopicPartition, OffsetAndMetadata> offsets = new HashMap<>();
     ZKGroupTopicDirs topicDirs = new ZKGroupTopicDirs(groupId, topicStr);
-    List<String> partitions = asJavaListConverter(
+    List<String> partitions = seqAsJavaListConverter(
         client.getChildrenParentMayNotExist(topicDirs.consumerOffsetDir())).asJava();
     for (String partition : partitions) {
       TopicPartition key = new TopicPartition(topicStr, Integer.valueOf(partition));
