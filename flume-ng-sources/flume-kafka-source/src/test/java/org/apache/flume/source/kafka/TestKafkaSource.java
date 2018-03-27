@@ -20,7 +20,7 @@ package org.apache.flume.source.kafka;
 import com.google.common.base.Charsets;
 import com.google.common.collect.Lists;
 import junit.framework.Assert;
-import kafka.common.TopicExistsException;
+import org.apache.kafka.common.errors.TopicExistsException; 
 import kafka.utils.ZKGroupTopicDirs;
 import kafka.utils.ZkUtils;
 import org.apache.avro.io.BinaryEncoder;

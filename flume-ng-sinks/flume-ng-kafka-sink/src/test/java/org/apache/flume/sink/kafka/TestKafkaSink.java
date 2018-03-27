@@ -21,6 +21,7 @@ package org.apache.flume.sink.kafka;
 import com.google.common.base.Charsets;
 
 import kafka.admin.AdminUtils;
+import kafka.admin.RackAwareMode;
 import kafka.message.MessageAndMetadata;
 import kafka.utils.ZkUtils;
 
@@ -674,7 +675,8 @@ public class TestKafkaSink {
         ZkUtils.apply(testUtil.getZkUrl(), sessionTimeoutMs, connectionTimeoutMs, false);
     int replicationFactor = 1;
     Properties topicConfig = new Properties();
-    AdminUtils.createTopic(zkUtils, topicName, numPartitions, replicationFactor, topicConfig);
+    AdminUtils.createTopic(zkUtils, topicName, numPartitions, replicationFactor, topicConfig,
+                            RackAwareMode.Enforced$.MODULE$);
   }
 
   public static void deleteTopic(String topicName) {
