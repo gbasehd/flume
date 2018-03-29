@@ -142,6 +142,9 @@ public class HeaderSplitInterceptor implements Interceptor {
         headers.put(serializers.get(group),matcher.group(groupIndex));
       }
     }
+    else {
+    	logger.warn("no mathch any values");
+    }
     return event;
   }
 
