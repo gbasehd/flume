@@ -133,7 +133,21 @@ limitations under the License.
     <module>flume-ng-auth</module>
     <module>flume-shared</module>
   </modules>
-
+    <repositories>
+   <repository>
+        <id>spring-libs</id>
+        <url>http://repo.spring.io/libs-milestone/</url>
+   </repository>
+   <repository>
+      <id>p2.jfrog.org</id>
+      <url>http://p2.jfrog.org/libs-releases</url>
+    </repository>
+	<repository>  
+      <id>nexus.axiomalaska.com</id>  
+      <url>http://nexus.axiomalaska.com/nexus/content/repositories/public</url>  
+    </repository>  
+	
+  </repositories> 
   <profiles>
 
     <profile>
