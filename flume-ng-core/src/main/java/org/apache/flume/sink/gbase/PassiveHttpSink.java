@@ -44,9 +44,10 @@ import com.google.common.base.Throwables;
 
 public class PassiveHttpSink extends AbstractSink implements Configurable {
   /*
-   * There are 2 ways of doing this: a. Have a static server instance and use connectors in each
-   * source which binds to the port defined for that source. b. Each source starts its own server
-   * instance, which binds to the source's port.
+   * There are 2 ways of doing this: 
+   * a. Have a static server instance and use connectors in each source which binds to the port
+   *    defined for that source. 
+   * b. Each source starts its own server instance, which binds to the source's port.
    *
    * b is more efficient than a because Jetty does not allow binding a servlet to a connector. So
    * each request will need to go through each each of the handlers/servlet till the correct one is
@@ -239,7 +240,7 @@ public class PassiveHttpSink extends AbstractSink implements Configurable {
 
       if (eventSize == 0) {
         sinkCounter.incrementBatchEmptyCount();
-      } else if (eventSize < 1000 /* batchSize */) {
+      } else if (eventSize < batchSize) {
         sinkCounter.incrementBatchUnderflowCount();
       }
       sinkCounter.incrementBatchCompleteCount();
