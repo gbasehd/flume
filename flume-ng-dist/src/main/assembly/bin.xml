@@ -59,7 +59,7 @@
   <fileSets>
     <fileSet>
       <directory>../</directory>
-
+      <lineEnding>unix</lineEnding>
       <excludes>
         <exclude>flume-ng-configuration/**</exclude>
         <exclude>flume-ng-sdk/**</exclude>

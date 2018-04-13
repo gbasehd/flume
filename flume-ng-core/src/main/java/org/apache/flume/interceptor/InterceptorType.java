@@ -23,12 +23,15 @@ public enum InterceptorType {
   TIMESTAMP(org.apache.flume.interceptor.TimestampInterceptor.Builder.class),
   HOST(org.apache.flume.interceptor.HostInterceptor.Builder.class),
   STATIC(org.apache.flume.interceptor.StaticInterceptor.Builder.class),
+  JOIN(org.apache.flume.interceptor.HeaderJoinInterceptor.Builder.class),
   REGEX_FILTER(
       org.apache.flume.interceptor.RegexFilteringInterceptor.Builder.class),
   REGEX_EXTRACTOR(org.apache.flume.interceptor.RegexExtractorInterceptor.Builder.class),
   REMOVE_HEADER(org.apache.flume.interceptor.RemoveHeaderInterceptor.Builder.class),
-  SEARCH_REPLACE(org.apache.flume.interceptor.SearchAndReplaceInterceptor.Builder.class);
-
+  SEARCH_REPLACE(org.apache.flume.interceptor.SearchAndReplaceInterceptor.Builder.class),
+  HEADER_TO_BODY(org.apache.flume.interceptor.HeaderToBodyInterceptor.Builder.class),
+  HEADER_SPLIT(org.apache.flume.interceptor.HeaderSplitInterceptor.Builder.class);
+  
   private final Class<? extends Interceptor.Builder> builderClass;
 
   InterceptorType(Class<? extends Interceptor.Builder> builderClass) {
