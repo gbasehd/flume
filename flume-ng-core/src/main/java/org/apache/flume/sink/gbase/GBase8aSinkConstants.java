@@ -26,10 +26,10 @@ public class GBase8aSinkConstants {
   public static final String BATCH_SIZE = "batchSize";
   public static final String INTERVAL = "interval";
   public static final String CONNECTION_STRING = GBASE8A_PREFIX + "jdbcUrl";
-  public static final String GBASE8A_DATABASE = GBASE8A_PREFIX + "database";  
+  public static final String GBASE8A_DATABASE = GBASE8A_PREFIX + "database";
   public static final String GBASE8A_TABLE = GBASE8A_PREFIX + "table";
-  
-  public static final int DFLT_BATCH_SIZE = 10000; // events
-  public static final int DFLT_INTERVAL = 10000;   // ms
-}
 
+  public static final int DFLT_BATCH_SIZE = 10000; // events
+  public static final int DFLT_INTERVAL = 10000; // ms
+  public static final String DFLT_HANDLER = "org.apache.flume.sink.gbase.PassiveHttpSink$CHUNKHandler";
+}

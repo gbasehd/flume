@@ -21,16 +21,13 @@ package org.apache.flume.sink.gbase;
 import org.apache.flume.Channel;
 import org.apache.flume.Context;
 import org.apache.flume.CounterGroup;
-import org.apache.flume.Event;
 import org.apache.flume.EventDeliveryException;
-import org.apache.flume.Transaction;
 import org.apache.flume.conf.Configurable;
 import org.apache.flume.sink.AbstractSink;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.base.Preconditions;
-
 
 /**
  * A Flume Sink that can publish messages to GBase 8a MPP cluster.
@@ -40,7 +37,7 @@ public class GBase8aSink extends AbstractSink implements Configurable {
   private static final Logger logger = LoggerFactory.getLogger(GBase8aSink.class);
 
   private PassiveHttpSink httpSink;
-  
+
   private CounterGroup counterGroup;
   private int batchSize;
 
@@ -51,41 +48,21 @@ public class GBase8aSink extends AbstractSink implements Configurable {
 
   @Override
   public void configure(Context context) {
-    batchSize = context.getInteger(GBase8aSinkConstants.BATCH_SIZE, GBase8aSinkConstants.DFLT_BATCH_SIZE);
-    logger.debug(this.getName() + " " +
-        "batch size set to " + String.valueOf(batchSize));
+    httpSink.configure(context);
+
+    batchSize = context.getInteger(GBase8aSinkConstants.BATCH_SIZE,
+        GBase8aSinkConstants.DFLT_BATCH_SIZE);
+    logger.debug(this.getName() + " " + "batch size set to " + String.valueOf(batchSize));
     Preconditions.checkArgument(batchSize > 0, "Batch size must be > 0");
   }
 
   @Override
   public Status process() throws EventDeliveryException {
     Status status = Status.READY;
-    
-    Channel channel = getChannel();
-    Transaction transaction = channel.getTransaction();
-    Event event = null;
 
-    try {
-      transaction.begin();
-      int i = 0;
-      for (i = 0; i < batchSize; i++) {
-        event = channel.take();
-        if (event == null) {
-          status = Status.BACKOFF;
-          break;
-        }
-      }
-      transaction.commit();
-      counterGroup.addAndGet("events.success", (long) Math.min(batchSize, i));
-      counterGroup.incrementAndGet("transaction.success");
-    } catch (Exception ex) {
-      transaction.rollback();
-      counterGroup.incrementAndGet("transaction.failed");
-      logger.error("Failed to deliver event. Exception follows.", ex);
-      throw new EventDeliveryException("Failed to deliver event: " + event, ex);
-    } finally {
-      transaction.close();
-    }
+    /*
+     * TODO 等待合适时间通过 jdbc 通知 8a 来读取数据
+     */
 
     return status;
   }
@@ -97,7 +74,7 @@ public class GBase8aSink extends AbstractSink implements Configurable {
     counterGroup.setName(this.getName());
     super.start();
     httpSink.start();
-    
+
     logger.info("GBase 8a sink {} started.", getName());
   }
 
@@ -108,8 +85,7 @@ public class GBase8aSink extends AbstractSink implements Configurable {
     httpSink.stop();
     super.stop();
 
-    logger.info("GBase 8a sink {} stopped. Event metrics: {}",
-        getName(), counterGroup);
+    logger.info("GBase 8a sink {} stopped. Event metrics: {}", getName(), counterGroup);
   }
 
   @Override
@@ -117,5 +93,10 @@ public class GBase8aSink extends AbstractSink implements Configurable {
     return "GBase8a " + getName() + " { batchSize: " + batchSize + " }";
   }
 
-}
+  @Override
+  public synchronized void setChannel(Channel channel) {
+    httpSink.setChannel(channel);
+    super.setChannel(channel);
+  }
 
+}
