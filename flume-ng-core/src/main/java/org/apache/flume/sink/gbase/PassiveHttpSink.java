@@ -11,12 +11,8 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import org.apache.flume.Channel;
 import org.apache.flume.Context;
-import org.apache.flume.CounterGroup;
-import org.apache.flume.Event;
 import org.apache.flume.EventDeliveryException;
-import org.apache.flume.Transaction;
 import org.apache.flume.conf.Configurable;
 import org.apache.flume.instrumentation.SinkCounter;
 import org.apache.flume.sink.AbstractSink;
@@ -59,10 +55,8 @@ public class PassiveHttpSink extends AbstractSink implements Configurable {
   private volatile Integer port;
   private volatile Server srv;
   private volatile String host;
-  private HttpSinkHandler handler;
+  private PassiveHttpSinkHandler handler;
   private SinkCounter sinkCounter;
-  private CounterGroup counterGroup = new CounterGroup();
-  private int batchSize = GBase8aSinkConstants.DFLT_BATCH_SIZE;
 
   // SSL configuration variable
   private volatile String keyStorePath;
@@ -113,10 +107,11 @@ public class PassiveHttpSink extends AbstractSink implements Configurable {
       }
 
       @SuppressWarnings("unchecked")
-      Class<? extends HttpSinkHandler> clazz = (Class<? extends HttpSinkHandler>) Class
+      Class<? extends PassiveHttpSinkHandler> clazz = (Class<? extends PassiveHttpSinkHandler>) Class
           .forName(handlerClassName);
       handler = clazz.getDeclaredConstructor().newInstance();
-
+      handler.setSink(this);
+      
       Map<String, String> subProps = context
           .getSubProperties(HTTPSourceConfigurationConstants.CONFIG_HANDLER_PREFIX);
       handler.configure(new Context(subProps));
@@ -196,7 +191,6 @@ public class PassiveHttpSink extends AbstractSink implements Configurable {
     }
     Preconditions.checkArgument(srv.isRunning());
     sinkCounter.start();
-    counterGroup.setName(this.getName());
     super.start();
   }
 
@@ -221,9 +215,9 @@ public class PassiveHttpSink extends AbstractSink implements Configurable {
     public void doPost(HttpServletRequest request, HttpServletResponse response)
         throws IOException {
       sinkCounter.incrementEventDrainAttemptCount();
-      long eventSize = 0;
+      long handledEventSize = 0;
       try {
-        eventSize = handler.handle(request, response);
+        handledEventSize = handler.handle(request, response);
       } catch (HTTPBadRequestException ex) {
         LOG.warn("Received bad request from client. ", ex);
         response.sendError(HttpServletResponse.SC_BAD_REQUEST,
@@ -238,13 +232,11 @@ public class PassiveHttpSink extends AbstractSink implements Configurable {
 
       response.flushBuffer();
 
-      if (eventSize == 0) {
+      if (handledEventSize == 0) {
         sinkCounter.incrementBatchEmptyCount();
-      } else if (eventSize < batchSize) {
-        sinkCounter.incrementBatchUnderflowCount();
       }
       sinkCounter.incrementBatchCompleteCount();
-      sinkCounter.addToEventDrainSuccessCount(eventSize);
+      sinkCounter.addToEventDrainSuccessCount(handledEventSize);
     }
 
     @Override
@@ -257,48 +249,6 @@ public class PassiveHttpSink extends AbstractSink implements Configurable {
   public Status process() throws EventDeliveryException {
     // do nothing
     return Status.BACKOFF;
-  }
-
-  public class CHUNKHandler implements HttpSinkHandler {
-
-    @Override
-    public long handle(HttpServletRequest request, HttpServletResponse response)
-        throws EventDeliveryException {
-      Channel channel = getChannel();
-      Transaction transaction = channel.getTransaction();
-      Event event = null;
-
-      long eventSize = 0;
-      try {
-        transaction.begin();
-        for (eventSize = 0; eventSize < batchSize; eventSize++) {
-          event = channel.take();
-          if (event == null) {
-            break;
-          }
-
-          // TODO write event to response
-        }
-
-        transaction.commit();
-        counterGroup.addAndGet("events.success", (long) Math.min(batchSize, eventSize));
-        counterGroup.incrementAndGet("transaction.success");
-      } catch (Exception ex) {
-        transaction.rollback();
-        counterGroup.incrementAndGet("transaction.failed");
-        LOG.error("Failed to deliver event. Exception follows.", ex);
-        throw new EventDeliveryException("Failed to deliver event: " + event, ex);
-      } finally {
-        transaction.close();
-      }
-
-      return eventSize;
-    }
-
-    @Override
-    public void configure(Context context) {
-    }
-
   }
 
 }
