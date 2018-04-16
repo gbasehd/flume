@@ -83,7 +83,7 @@ public class PassiveHttpSink extends AbstractSink implements Configurable {
           "PassiveHttpSink requires a port number to be" + " specified");
 
       String handlerClassName = context.getString(HTTPSourceConfigurationConstants.CONFIG_HANDLER,
-          HTTPSourceConfigurationConstants.DEFAULT_HANDLER).trim();
+          GBase8aSinkConstants.DFLT_HANDLER).trim();
 
       if (sslEnabled) {
         LOG.debug("SSL configuration enabled");
@@ -119,8 +119,8 @@ public class PassiveHttpSink extends AbstractSink implements Configurable {
       LOG.error("Error while configuring PassiveHttpSink. Exception follows.", ex);
       Throwables.propagate(ex);
     } catch (ClassCastException ex) {
-      LOG.error("Deserializer is not an instance of HTTPSourceHandler."
-          + "Deserializer must implement HTTPSourceHandler.");
+      LOG.error("Deserializer is not an instance of PassiveHttpSinkHandler."
+          + "Deserializer must implement PassiveHttpSinkHandler.");
       Throwables.propagate(ex);
     } catch (Exception ex) {
       LOG.error("Error configuring PassiveHttpSink!", ex);

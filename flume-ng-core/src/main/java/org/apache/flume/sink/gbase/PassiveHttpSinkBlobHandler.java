@@ -15,8 +15,8 @@ import org.apache.flume.Transaction;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class PassiveHttpSinkChunkedHandler implements PassiveHttpSinkHandler {
-  private static final Logger LOG = LoggerFactory.getLogger(PassiveHttpSinkChunkedHandler.class);
+public class PassiveHttpSinkBlobHandler implements PassiveHttpSinkHandler {
+  private static final Logger LOG = LoggerFactory.getLogger(PassiveHttpSinkBlobHandler.class);
   private Sink sink;
   private CounterGroup counterGroup = new CounterGroup();
   private int batchSize = GBase8aSinkConstants.DFLT_BATCH_SIZE;
@@ -101,7 +101,6 @@ public class PassiveHttpSinkChunkedHandler implements PassiveHttpSinkHandler {
   private void setupResponse(HttpServletResponse response) {
     response.setContentType(contentType);
     response.setCharacterEncoding(characterEncoding);
-    response.setHeader("Transfer-Encoding", "chunked");
     response.setStatus(HttpServletResponse.SC_OK);
   }
 }
