@@ -129,6 +129,7 @@ public class PassiveHttpSinkBlobHandler implements PassiveHttpSinkHandler {
       try {
         contentPrefix = prefix.getBytes(characterEncoding);
       } catch (UnsupportedEncodingException e) {
+        LOG.error("Invalid contentPrefix", e);
       }
     }
 
@@ -137,6 +138,7 @@ public class PassiveHttpSinkBlobHandler implements PassiveHttpSinkHandler {
       try {
         contentSurffix = surffix.getBytes(characterEncoding);
       } catch (UnsupportedEncodingException e) {
+        LOG.error("Invalid contentSurffix", e);
       }
     }
 
@@ -145,6 +147,7 @@ public class PassiveHttpSinkBlobHandler implements PassiveHttpSinkHandler {
       try {
         contentSeparator = separator.getBytes(characterEncoding);
       } catch (UnsupportedEncodingException e) {
+        LOG.error("Invalid contentSeparator", e);
       }
     }
 
