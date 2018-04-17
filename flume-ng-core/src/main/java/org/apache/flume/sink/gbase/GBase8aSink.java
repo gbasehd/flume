@@ -31,6 +31,8 @@ import com.google.common.base.Preconditions;
 
 /**
  * A Flume Sink that can publish messages to GBase 8a MPP cluster.
+ * 
+ * @author He Jiang
  */
 public class GBase8aSink extends AbstractSink implements Configurable {
 

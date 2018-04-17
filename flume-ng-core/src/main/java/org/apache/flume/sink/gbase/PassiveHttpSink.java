@@ -1,3 +1,21 @@
+/**
+ Licensed to the Apache Software Foundation (ASF) under one or more
+ contributor license agreements.  See the NOTICE file distributed with
+ this work for additional information regarding copyright ownership.
+ The ASF licenses this file to You under the Apache License, Version 2.0
+ (the "License"); you may not use this file except in compliance with
+ the License.  You may obtain a copy of the License at
+
+ http://www.apache.org/licenses/LICENSE-2.0
+
+ Unless required by applicable law or agreed to in writing, software
+ distributed under the License is distributed on an "AS IS" BASIS,
+ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ See the License for the specific language governing permissions and
+ limitations under the License.
+ limitations under the License.
+ */
+
 package org.apache.flume.sink.gbase;
 
 import java.io.IOException;
@@ -38,8 +56,13 @@ import org.slf4j.LoggerFactory;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
 
+/**
+ * A Flume Sink that waits for clients to pull events
+ * 
+ * @author He Jiang
+ */
 public class PassiveHttpSink extends AbstractSink implements Configurable {
-  /*
+  /**
    * There are 2 ways of doing this: 
    * a. Have a static server instance and use connectors in each source which binds to the port
    *    defined for that source. 
@@ -111,7 +134,7 @@ public class PassiveHttpSink extends AbstractSink implements Configurable {
           .forName(handlerClassName);
       handler = clazz.getDeclaredConstructor().newInstance();
       handler.setSink(this);
-      
+
       Map<String, String> subProps = context
           .getSubProperties(HTTPSourceConfigurationConstants.CONFIG_HANDLER_PREFIX);
       handler.configure(new Context(subProps));

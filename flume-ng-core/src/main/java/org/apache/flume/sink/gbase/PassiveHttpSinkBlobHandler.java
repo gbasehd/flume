@@ -1,3 +1,21 @@
+/**
+ Licensed to the Apache Software Foundation (ASF) under one or more
+ contributor license agreements.  See the NOTICE file distributed with
+ this work for additional information regarding copyright ownership.
+ The ASF licenses this file to You under the Apache License, Version 2.0
+ (the "License"); you may not use this file except in compliance with
+ the License.  You may obtain a copy of the License at
+
+ http://www.apache.org/licenses/LICENSE-2.0
+
+ Unless required by applicable law or agreed to in writing, software
+ distributed under the License is distributed on an "AS IS" BASIS,
+ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ See the License for the specific language governing permissions and
+ limitations under the License.
+ limitations under the License.
+ */
+
 package org.apache.flume.sink.gbase;
 
 import java.io.OutputStream;
@@ -15,6 +33,11 @@ import org.apache.flume.Transaction;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * 
+ * @author He Jiang
+ *
+ */
 public class PassiveHttpSinkBlobHandler implements PassiveHttpSinkHandler {
   private static final Logger LOG = LoggerFactory.getLogger(PassiveHttpSinkBlobHandler.class);
   private Sink sink;
@@ -22,12 +45,12 @@ public class PassiveHttpSinkBlobHandler implements PassiveHttpSinkHandler {
   private int batchSize = GBase8aSinkConstants.DFLT_BATCH_SIZE;
   private String contentType = GBase8aSinkConstants.DFLT_CONTENT_TYPE;
   private String characterEncoding = GBase8aSinkConstants.DFLT_CHARACTER_ENCODING;
-  
+
   @Override
   public long handle(HttpServletRequest request, HttpServletResponse response)
       throws EventDeliveryException {
     checkRequest(request);
-    
+
     Channel channel = sink.getChannel();
     Transaction transaction = channel.getTransaction();
     Event event = null;
@@ -46,11 +69,11 @@ public class PassiveHttpSinkBlobHandler implements PassiveHttpSinkHandler {
           setupResponse(response);
           responsePrepared = true;
         }
-        
+
         // write event to response
         OutputStream stream = response.getOutputStream();
         stream.write(event.getBody());
-        
+
         // flush buffer to send data immediately
         response.flushBuffer();
       }
@@ -97,7 +120,7 @@ public class PassiveHttpSinkBlobHandler implements PassiveHttpSinkHandler {
   private void checkRequest(HttpServletRequest request) {
     // throw HTTPBadRequestException if an invalid request received
   }
-  
+
   private void setupResponse(HttpServletResponse response) {
     response.setContentType(contentType);
     response.setCharacterEncoding(characterEncoding);

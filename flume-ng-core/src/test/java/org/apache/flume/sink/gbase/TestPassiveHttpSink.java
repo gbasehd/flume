@@ -1,20 +1,21 @@
-/*
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+/**
+ Licensed to the Apache Software Foundation (ASF) under one or more
+ contributor license agreements.  See the NOTICE file distributed with
+ this work for additional information regarding copyright ownership.
+ The ASF licenses this file to You under the Apache License, Version 2.0
+ (the "License"); you may not use this file except in compliance with
+ the License.  You may obtain a copy of the License at
+
+ http://www.apache.org/licenses/LICENSE-2.0
+
+ Unless required by applicable law or agreed to in writing, software
+ distributed under the License is distributed on an "AS IS" BASIS,
+ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ See the License for the specific language governing permissions and
+ limitations under the License.
+ limitations under the License.
  */
+
 package org.apache.flume.sink.gbase;
 
 import java.io.IOException;
@@ -26,7 +27,6 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.URL;
 import java.net.UnknownHostException;
-import java.nio.charset.Charset;
 import java.security.SecureRandom;
 import java.security.cert.CertificateException;
 import java.util.Set;
@@ -98,6 +98,7 @@ public class TestPassiveHttpSink {
     ctx.put(HTTPSourceConfigurationConstants.CONFIG_BIND, "0.0.0.0");
     ctx.put(HTTPSourceConfigurationConstants.CONFIG_PORT, String.valueOf(selectedPort));
     ctx.put("QueuedThreadPool.MaxThreads", "100");
+
     return ctx;
   }
 
@@ -108,6 +109,16 @@ public class TestPassiveHttpSink {
     sslContext.put(HTTPSourceConfigurationConstants.SSL_KEYSTORE_PASSWORD, "password");
     sslContext.put(HTTPSourceConfigurationConstants.SSL_KEYSTORE,
         "src/test/resources/jettykeystore");
+
+    sslContext.put(
+        HTTPSourceConfigurationConstants.CONFIG_HANDLER_PREFIX + GBase8aSinkConstants.CONTENT_TYPE,
+        "text/plain");
+    sslContext.put(HTTPSourceConfigurationConstants.CONFIG_HANDLER_PREFIX
+        + GBase8aSinkConstants.CHARACTER_ENCODING, "gbk");
+    sslContext.put(
+        HTTPSourceConfigurationConstants.CONFIG_HANDLER_PREFIX + GBase8aSinkConstants.BATCH_SIZE,
+        "2");
+
     return sslContext;
   }
 
@@ -217,19 +228,6 @@ public class TestPassiveHttpSink {
   }
 
   public void doTestHttps(String protocol, int port) throws Exception {
-    Transaction transaction = httpsChannel.getTransaction();
-
-    StringBuilder expected = new StringBuilder();
-
-    transaction.begin();
-    for (int i = 0; i < 2; i++) {
-      Event event = EventBuilder.withBody("test event " + (i + 1), Charsets.UTF_8);
-      httpsChannel.put(event);
-      expected.append("test event " + (i + 1));
-    }
-    transaction.commit();
-    transaction.close();
-
     HttpsURLConnection httpsURLConnection = null;
     try {
       TrustManager[] trustAllCerts = { new X509TrustManager() {
@@ -278,16 +276,28 @@ public class TestPassiveHttpSink {
       httpsURLConnection.setDoOutput(true);
       httpsURLConnection.setRequestMethod("POST");
 
+      Transaction transaction = httpsChannel.getTransaction();
+      transaction.begin();
+      for (int i = 0; i < 3; i++) {
+        Event event = EventBuilder.withBody("test event " + (i + 1), Charsets.UTF_8);
+        httpsChannel.put(event);
+      }
+      transaction.commit();
+      transaction.close();
+
       int statusCode = httpsURLConnection.getResponseCode();
       Assert.assertEquals(200, statusCode);
 
-      String str = IOUtils.toString(httpsURLConnection.getInputStream());
-      Assert.assertEquals(expected.toString(), str);
+      Assert.assertEquals("text/plain;charset=gbk", httpsURLConnection.getContentType());
+
+      String str = IOUtils.toString(httpsURLConnection.getInputStream(), "gbk");
+      Assert.assertEquals("test event 1test event 2", str);
 
       Transaction tx = httpsChannel.getTransaction();
       tx.begin();
       Event e = httpsChannel.take();
-      Assert.assertNull(e);
+      // 我们发了3条，只收了一批(2条), 所以还有 Event 在 Channel 里
+      Assert.assertNotNull(e);
       tx.commit();
       tx.close();
 
@@ -381,52 +391,5 @@ public class TestPassiveHttpSink {
     Set<ObjectInstance> queryMBeans = mbeanServer.queryMBeans(objectName, null);
     Assert.assertTrue(queryMBeans.size() > 0);
   }
-  /*
-  @Test
-  public void testHandlerConfiguration() throws Exception {
-    Context context = getDefaultNonSecureContext(selectedPort);
-    context.put(GBase8aSinkConstants.CONTENT_TYPE, "text/plain");
-    context.put(GBase8aSinkConstants.CHARACTER_ENCODING, "gbk");
-    context.put(GBase8aSinkConstants.BATCH_SIZE, "1");
 
-    Configurables.configure(sink, context);
-
-    HttpClientBuilder builder = HttpClientBuilder.create();
-    httpClient = builder.build();
-    postRequest = new HttpPost("http://0.0.0.0:" + selectedPort);
-
-    Transaction transaction = channel.getTransaction();
-    transaction.begin();
-    for (int i = 0; i < 2; i++) {
-      Event event = EventBuilder.withBody("事件序号: #" + (i + 1), Charset.forName("gbk"));
-      channel.put(event);
-    }
-    transaction.commit();
-    transaction.close();
-
-    HttpResponse response = httpClient.execute(postRequest);
-
-    Assert.assertEquals(HttpServletResponse.SC_OK, response.getStatusLine().getStatusCode());
-
-    HttpEntity entity = response.getEntity();
-
-    Header header = entity.getContentType();
-    Assert.assertEquals("text/plain;charset=gbk", header.getValue());
-
-    header = response.getFirstHeader("Transfer-Encoding");
-    Assert.assertEquals("chunked", header.getValue());
-
-    InputStream stream = entity.getContent();
-    String str = IOUtils.toString(stream);
-    Assert.assertEquals("事件序号: #1", str);
-
-    Transaction tx = channel.getTransaction();
-    tx.begin();
-    Event e = channel.take();
-    Assert.assertNull(e);
-    tx.commit();
-    tx.close();
-
-  }
-  */
 }
