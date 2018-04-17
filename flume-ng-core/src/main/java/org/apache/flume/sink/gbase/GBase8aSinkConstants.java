@@ -45,6 +45,9 @@ public class GBase8aSinkConstants {
   public static final String BATCH_SIZE = "batchSize";
   public static final String CHARACTER_ENCODING = "characterEncoding";
   public static final String CONTENT_TYPE = "contentType";
+  public static final String CONTENT_PREFIX = "contentPrefix";
+  public static final String CONTENT_SURFFIX = "contentSurffix";
+  public static final String CONTENT_SEPARATOR = "contentSeparator";
 
   /* 参数默认值 */
   public static final int DFLT_INTERVAL = 10000; // ms
@@ -54,4 +57,7 @@ public class GBase8aSinkConstants {
   public static final int DFLT_BATCH_SIZE = 10000; // events
   public static final String DFLT_CHARACTER_ENCODING = Charsets.UTF_8.name();
   public static final String DFLT_CONTENT_TYPE = "application/json";
+  public static final String DFLT_CONTENT_PREFIX = null;
+  public static final String DFLT_CONTENT_SURFFIX = null;
+  public static final String DFLT_CONTENT_SEPARATOR = null;
 }

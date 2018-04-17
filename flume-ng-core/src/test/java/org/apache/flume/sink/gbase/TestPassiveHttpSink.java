@@ -27,6 +27,7 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.URL;
 import java.net.UnknownHostException;
+import java.nio.charset.Charset;
 import java.security.SecureRandom;
 import java.security.cert.CertificateException;
 import java.util.Set;
@@ -107,17 +108,14 @@ public class TestPassiveHttpSink {
     sslContext.put(HTTPSourceConfigurationConstants.CONFIG_PORT, String.valueOf(sslPort));
     sslContext.put(HTTPSourceConfigurationConstants.SSL_ENABLED, "true");
     sslContext.put(HTTPSourceConfigurationConstants.SSL_KEYSTORE_PASSWORD, "password");
-    sslContext.put(HTTPSourceConfigurationConstants.SSL_KEYSTORE,
-        "src/test/resources/jettykeystore");
+    sslContext.put(HTTPSourceConfigurationConstants.SSL_KEYSTORE, "src/test/resources/jettykeystore");
 
-    sslContext.put(
-        HTTPSourceConfigurationConstants.CONFIG_HANDLER_PREFIX + GBase8aSinkConstants.CONTENT_TYPE,
-        "text/plain");
-    sslContext.put(HTTPSourceConfigurationConstants.CONFIG_HANDLER_PREFIX
-        + GBase8aSinkConstants.CHARACTER_ENCODING, "gbk");
-    sslContext.put(
-        HTTPSourceConfigurationConstants.CONFIG_HANDLER_PREFIX + GBase8aSinkConstants.BATCH_SIZE,
-        "2");
+    sslContext.put(HTTPSourceConfigurationConstants.CONFIG_HANDLER_PREFIX + GBase8aSinkConstants.CONTENT_TYPE, "text/plain");
+    sslContext.put(HTTPSourceConfigurationConstants.CONFIG_HANDLER_PREFIX + GBase8aSinkConstants.CHARACTER_ENCODING, "gbk");
+    sslContext.put(HTTPSourceConfigurationConstants.CONFIG_HANDLER_PREFIX + GBase8aSinkConstants.BATCH_SIZE, "2");
+    sslContext.put(HTTPSourceConfigurationConstants.CONFIG_HANDLER_PREFIX + GBase8aSinkConstants.CONTENT_PREFIX, "[");
+    sslContext.put(HTTPSourceConfigurationConstants.CONFIG_HANDLER_PREFIX + GBase8aSinkConstants.CONTENT_SURFFIX, "]");
+    sslContext.put(HTTPSourceConfigurationConstants.CONFIG_HANDLER_PREFIX + GBase8aSinkConstants.CONTENT_SEPARATOR, ", ");
 
     return sslContext;
   }
@@ -141,8 +139,7 @@ public class TestPassiveHttpSink {
     httpsSink.start();
   }
 
-  private static void configureSinkAndChannel(PassiveHttpSink sink, Channel channel,
-      Context context) {
+  private static void configureSinkAndChannel(PassiveHttpSink sink, Channel channel, Context context) {
     Context channelContext = new Context();
     channelContext.put("capacity", "100");
     Configurables.configure(channel, channelContext);
@@ -232,14 +229,12 @@ public class TestPassiveHttpSink {
     try {
       TrustManager[] trustAllCerts = { new X509TrustManager() {
         @Override
-        public void checkClientTrusted(java.security.cert.X509Certificate[] x509Certificates,
-            String s) throws CertificateException {
+        public void checkClientTrusted(java.security.cert.X509Certificate[] x509Certificates, String s) throws CertificateException {
           // noop
         }
 
         @Override
-        public void checkServerTrusted(java.security.cert.X509Certificate[] x509Certificates,
-            String s) throws CertificateException {
+        public void checkServerTrusted(java.security.cert.X509Certificate[] x509Certificates, String s) throws CertificateException {
           // noop
         }
 
@@ -279,7 +274,7 @@ public class TestPassiveHttpSink {
       Transaction transaction = httpsChannel.getTransaction();
       transaction.begin();
       for (int i = 0; i < 3; i++) {
-        Event event = EventBuilder.withBody("test event " + (i + 1), Charsets.UTF_8);
+        Event event = EventBuilder.withBody("测试事件 " + (i + 1), Charset.forName("gbk"));
         httpsChannel.put(event);
       }
       transaction.commit();
@@ -291,7 +286,7 @@ public class TestPassiveHttpSink {
       Assert.assertEquals("text/plain;charset=gbk", httpsURLConnection.getContentType());
 
       String str = IOUtils.toString(httpsURLConnection.getInputStream(), "gbk");
-      Assert.assertEquals("test event 1test event 2", str);
+      Assert.assertEquals("[测试事件 1, 测试事件 2]", str);
 
       Transaction tx = httpsChannel.getTransaction();
       tx.begin();
@@ -361,8 +356,7 @@ public class TestPassiveHttpSink {
     }
 
     @Override
-    public Socket createSocket(String s, int i, InetAddress inetAddress, int i2)
-        throws IOException, UnknownHostException {
+    public Socket createSocket(String s, int i, InetAddress inetAddress, int i2) throws IOException, UnknownHostException {
       SSLSocket sc = (SSLSocket) socketFactory.createSocket(s, i, inetAddress, i2);
       sc.setEnabledProtocols(protocols);
       return sc;
@@ -376,8 +370,7 @@ public class TestPassiveHttpSink {
     }
 
     @Override
-    public Socket createSocket(InetAddress inetAddress, int i, InetAddress inetAddress2, int i2)
-        throws IOException {
+    public Socket createSocket(InetAddress inetAddress, int i, InetAddress inetAddress2, int i2) throws IOException {
       SSLSocket sc = (SSLSocket) socketFactory.createSocket(inetAddress, i, inetAddress2, i2);
       sc.setEnabledProtocols(protocols);
       return sc;

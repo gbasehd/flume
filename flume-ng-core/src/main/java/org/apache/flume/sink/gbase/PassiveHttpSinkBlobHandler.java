@@ -19,6 +19,7 @@
 package org.apache.flume.sink.gbase;
 
 import java.io.OutputStream;
+import java.io.UnsupportedEncodingException;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -33,6 +34,8 @@ import org.apache.flume.Transaction;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.base.Strings;
+
 /**
  * 
  * @author He Jiang
@@ -45,10 +48,12 @@ public class PassiveHttpSinkBlobHandler implements PassiveHttpSinkHandler {
   private int batchSize = GBase8aSinkConstants.DFLT_BATCH_SIZE;
   private String contentType = GBase8aSinkConstants.DFLT_CONTENT_TYPE;
   private String characterEncoding = GBase8aSinkConstants.DFLT_CHARACTER_ENCODING;
+  private byte[] contentPrefix = null;
+  private byte[] contentSurffix = null;
+  private byte[] contentSeparator = null;
 
   @Override
-  public long handle(HttpServletRequest request, HttpServletResponse response)
-      throws EventDeliveryException {
+  public long handle(HttpServletRequest request, HttpServletResponse response) throws EventDeliveryException {
     checkRequest(request);
 
     Channel channel = sink.getChannel();
@@ -59,6 +64,7 @@ public class PassiveHttpSinkBlobHandler implements PassiveHttpSinkHandler {
     long eventSize = 0;
     try {
       transaction.begin();
+      OutputStream stream = response.getOutputStream();
       for (eventSize = 0; eventSize < batchSize; eventSize++) {
         event = channel.take();
         if (event == null) {
@@ -68,17 +74,24 @@ public class PassiveHttpSinkBlobHandler implements PassiveHttpSinkHandler {
         if (!responsePrepared) {
           setupResponse(response);
           responsePrepared = true;
+
+          if (contentPrefix != null) {
+            stream.write(contentPrefix);
+          }
+        } else {
+          if (contentSeparator != null) {
+            stream.write(contentSeparator);
+          }
         }
 
-        // write event to response
-        OutputStream stream = response.getOutputStream();
+        // write event body to response
         stream.write(event.getBody());
-
-        // flush buffer to send data immediately
-        response.flushBuffer();
       }
 
       if (eventSize > 0) {
+        if (contentSurffix != null) {
+          stream.write(contentSurffix);
+        }
         transaction.commit();
         counterGroup.addAndGet("events.success", (long) Math.min(batchSize, eventSize));
         counterGroup.incrementAndGet("transaction.success");
@@ -100,14 +113,40 @@ public class PassiveHttpSinkBlobHandler implements PassiveHttpSinkHandler {
     return eventSize;
   }
 
+  /*
+   * (non-Javadoc)
+   * 
+   * @see org.apache.flume.conf.Configurable#configure(org.apache.flume.Context)
+   */
   @Override
   public void configure(Context context) {
-    batchSize = context.getInteger(GBase8aSinkConstants.BATCH_SIZE,
-        GBase8aSinkConstants.DFLT_BATCH_SIZE);
-    characterEncoding = context.getString(GBase8aSinkConstants.CHARACTER_ENCODING,
-        GBase8aSinkConstants.DFLT_CHARACTER_ENCODING);
-    contentType = context.getString(GBase8aSinkConstants.CONTENT_TYPE,
-        GBase8aSinkConstants.DFLT_CONTENT_TYPE);
+    batchSize = context.getInteger(GBase8aSinkConstants.BATCH_SIZE, GBase8aSinkConstants.DFLT_BATCH_SIZE);
+    characterEncoding = context.getString(GBase8aSinkConstants.CHARACTER_ENCODING, GBase8aSinkConstants.DFLT_CHARACTER_ENCODING);
+    contentType = context.getString(GBase8aSinkConstants.CONTENT_TYPE, GBase8aSinkConstants.DFLT_CONTENT_TYPE);
+
+    String prefix = context.getString(GBase8aSinkConstants.CONTENT_PREFIX, GBase8aSinkConstants.DFLT_CONTENT_PREFIX);
+    if (!Strings.isNullOrEmpty(prefix)) {
+      try {
+        contentPrefix = prefix.getBytes(characterEncoding);
+      } catch (UnsupportedEncodingException e) {
+      }
+    }
+
+    String surffix = context.getString(GBase8aSinkConstants.CONTENT_SURFFIX, GBase8aSinkConstants.DFLT_CONTENT_SURFFIX);
+    if (!Strings.isNullOrEmpty(surffix)) {
+      try {
+        contentSurffix = surffix.getBytes(characterEncoding);
+      } catch (UnsupportedEncodingException e) {
+      }
+    }
+
+    String separator = context.getString(GBase8aSinkConstants.CONTENT_SEPARATOR, GBase8aSinkConstants.DFLT_CONTENT_SEPARATOR);
+    if (!Strings.isNullOrEmpty(separator)) {
+      try {
+        contentSeparator = separator.getBytes(characterEncoding);
+      } catch (UnsupportedEncodingException e) {
+      }
+    }
 
     counterGroup.setName(sink.getName());
   }
