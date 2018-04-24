@@ -73,9 +73,7 @@ public class BLOBHandler implements HTTPSourceHandler {
       }
       headers.put(parameter, value);
     }
-    /*String charset = request.getCharacterEncoding();
-    headers.put("charset", charset);*/
-    
+
     String servletPath = request.getServletPath();
     headers.put("path", servletPath);
 
