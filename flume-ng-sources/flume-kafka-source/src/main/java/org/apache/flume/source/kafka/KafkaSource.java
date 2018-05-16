@@ -207,6 +207,26 @@ public class KafkaSource extends AbstractPollableSource
           // If there are any records we commit them.
           if (rebalanceFlag.get()) {
             rebalanceFlag.set(false);
+            // invalidate remaining records
+            it = null;
+            // and drop processed events
+            eventList.clear();
+            tpAndOffsetMetadata.clear();
+            // and seek to committed offsets
+            for (Map.Entry<String, List<PartitionInfo>> es : consumer.listTopics().entrySet()) {
+              for (PartitionInfo pi : es.getValue()) {
+                TopicPartition tp = new TopicPartition(pi.topic(), pi.partition());
+                try {
+                  OffsetAndMetadata oam = consumer.committed(tp);
+                  if (oam != null) {
+                    consumer.seek(tp, oam.offset());
+                  }
+                } catch (Exception e) {
+                  // log.warn("ignore seeking exception, {}", e);
+                }
+              }
+            }
+            log.info("read-ahead records have been dropped.");
             break;
           }
           // check records after poll
