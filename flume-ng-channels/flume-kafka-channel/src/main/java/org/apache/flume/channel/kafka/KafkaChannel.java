@@ -478,6 +478,11 @@ public class KafkaChannel extends BasicChannelSemantics {
       // Give the channel a chance to commit if there has been a rebalance
       if (rebalanceFlag.get()) {
         logger.debug("Returning null event after Consumer rebalance.");
+
+        // drop buffered records to avoid consuming multiple times
+        ConsumerRecords<String, byte[]> records = ConsumerRecords.empty();
+        consumerAndRecords.get().recordIterator = records.iterator();
+
         return null;
       }
       if (!consumerAndRecords.get().failedEvents.isEmpty()) {
