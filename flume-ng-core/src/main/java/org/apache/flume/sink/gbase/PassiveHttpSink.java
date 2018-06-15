@@ -25,6 +25,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
+import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -265,6 +266,26 @@ public class PassiveHttpSink extends AbstractSink implements Configurable {
     @Override
     public void doGet(HttpServletRequest request, HttpServletResponse response) throws IOException {
       doPost(request, response);
+    }
+
+    @Override
+    protected void doHead(HttpServletRequest request, HttpServletResponse response)
+        throws ServletException, IOException {
+      try {
+        handler.handle(request, response);
+      } catch (HTTPBadRequestException ex) {
+        LOG.warn("Received bad request from client. ", ex);
+        response.sendError(HttpServletResponse.SC_BAD_REQUEST,
+            "Bad request from client. " + ex.getMessage());
+        return;
+      } catch (Exception ex) {
+        LOG.warn("Unexpected error while sending events. ", ex);
+        response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR,
+            "Unexpected error while sending events. " + ex.getMessage());
+        return;
+      }
+
+      response.flushBuffer();
     }
   }
 
