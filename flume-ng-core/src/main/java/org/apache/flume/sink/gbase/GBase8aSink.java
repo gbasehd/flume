@@ -98,6 +98,7 @@ public class GBase8aSink extends AbstractSink implements Configurable {
   @Override
   public Status process() throws EventDeliveryException {
     Status status = Status.READY;
+    
     try {
       stm.execute(loadSql);
       if (stm.getUpdateCount() == 0) {
@@ -155,7 +156,6 @@ public class GBase8aSink extends AbstractSink implements Configurable {
     connectGBase8a();
     httpSink.start();
     super.start();
-
     logger.info("GBase 8a sink {} started.", getName());
   }
 
@@ -163,6 +163,7 @@ public class GBase8aSink extends AbstractSink implements Configurable {
   public void stop() {
     logger.info("GBase 8a sink {} stopping...", getName());
     disconnectGBase8a();
+
     httpSink.stop();
     super.stop();
 
@@ -189,6 +190,7 @@ public class GBase8aSink extends AbstractSink implements Configurable {
         }
       }
     }
+
   }
 
   @Override

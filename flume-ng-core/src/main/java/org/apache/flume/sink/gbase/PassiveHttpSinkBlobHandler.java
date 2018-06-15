@@ -99,7 +99,6 @@ public class PassiveHttpSinkBlobHandler implements PassiveHttpSinkHandler {
       counterGroup.addAndGet("events.success", (long) Math.min(batchSize, eventSize));
       counterGroup.incrementAndGet("transaction.success");
       LOG.info("{} events to deliver.", eventSize);
-
       if (eventSize > 0) {
         if (contentSurffix != null) {
           stream.write(contentSurffix);
@@ -146,8 +145,7 @@ public class PassiveHttpSinkBlobHandler implements PassiveHttpSinkHandler {
       } catch (UnsupportedEncodingException e) {
         LOG.error("Invalid contentSurffix", e);
       }
-    }
-    
+    }  
     String separator = context.getString(GBase8aSinkConstants.CONTENT_SEPARATOR, GBase8aSinkConstants.DFLT_CONTENT_SEPARATOR);
     if (!Strings.isNullOrEmpty(separator)) {
       try {

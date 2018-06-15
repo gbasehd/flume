@@ -54,7 +54,7 @@ public class GBase8aSinkConstants {
   public static final String DFLT_HANDLER = "org.apache.flume.sink.gbase.PassiveHttpSinkBlobHandler";
   public static final String DFLT_DRIVER_CLASS = "com.gbase.jdbc.Driver";
   public static final int DFLT_LOAD_INTERVAL = 5; // s
-  
+
   /* handler 参数默认值 */
   public static final int DFLT_BATCH_SIZE = 10000; // events
   public static final String DFLT_CHARACTER_ENCODING = Charsets.UTF_8.name();
