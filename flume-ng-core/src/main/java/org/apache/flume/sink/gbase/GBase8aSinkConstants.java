@@ -30,17 +30,17 @@ public class GBase8aSinkConstants {
 
   public static final String GBASE8A_PREFIX = "gbase8a.";
 
-  /* 给 8a 发送 load data 指令的时间间隔 (单位: 秒) */
-  public static final String INTERVAL = "interval";
-
   /* 8a 连接参数 */
   public static final String CONNECTION_STRING = GBASE8A_PREFIX + "jdbcUrl";
   public static final String CONNECTION_USERNAME = GBASE8A_PREFIX + "username";
   public static final String CONNECTION_PASSWORD = GBASE8A_PREFIX + "password";
-
-  /* 8a 加载语句 (直接设置 SQL, 同时支持自动替换 PassiveHttpSink 服务路径 ${URI}) */
+  public static final String CONNECTION_DRIVER_CLASS = GBASE8A_PREFIX + "driverClass";
+  
+  /* 8a 加载语句 (直接设置 SQL, 同时支持自动替换 ${localhost}为本机ip+http服务的port) */
   public static final String SQL_STRING = GBASE8A_PREFIX + "loadSql";
-
+  /* 8a 加载语句的执行间隔(单位:秒)；只有在flume channel空闲是有效*/
+  public static final String LOAD_INTERVAL = GBASE8A_PREFIX + "loadInterval";
+  
   /* handler 参数 (设置时需要加 "handler." 前缀) */
   public static final String BATCH_SIZE = "batchSize";
   public static final String CHARACTER_ENCODING = "characterEncoding";
@@ -52,7 +52,9 @@ public class GBase8aSinkConstants {
   /* 参数默认值 */
   public static final int DFLT_INTERVAL = 10000; // ms
   public static final String DFLT_HANDLER = "org.apache.flume.sink.gbase.PassiveHttpSinkBlobHandler";
-
+  public static final String DFLT_DRIVER_CLASS = "com.gbase.jdbc.Driver";
+  public static final int DFLT_LOAD_INTERVAL = 5; // s
+  
   /* handler 参数默认值 */
   public static final int DFLT_BATCH_SIZE = 10000; // events
   public static final String DFLT_CHARACTER_ENCODING = Charsets.UTF_8.name();

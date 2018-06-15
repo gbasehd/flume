@@ -20,10 +20,13 @@ package org.apache.flume.sink.gbase;
 
 import java.io.OutputStream;
 import java.io.UnsupportedEncodingException;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import org.apache.commons.lang.StringEscapeUtils;
 import org.apache.flume.Channel;
 import org.apache.flume.Context;
 import org.apache.flume.CounterGroup;
@@ -31,6 +34,7 @@ import org.apache.flume.Event;
 import org.apache.flume.EventDeliveryException;
 import org.apache.flume.Sink;
 import org.apache.flume.Transaction;
+import org.eclipse.jetty.http.HttpMethod;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -53,14 +57,19 @@ public class PassiveHttpSinkBlobHandler implements PassiveHttpSinkHandler {
   private byte[] contentSeparator = null;
 
   @Override
-  public long handle(HttpServletRequest request, HttpServletResponse response) throws EventDeliveryException {
+  public long handle(HttpServletRequest request, HttpServletResponse response)
+      throws EventDeliveryException {
     checkRequest(request);
 
     Channel channel = sink.getChannel();
     Transaction transaction = channel.getTransaction();
     Event event = null;
 
-    boolean responsePrepared = false;
+    if ("HEAD".equals(request.getMethod())) {
+      setupResponse(response);
+      return 0;
+    }
+
     long eventSize = 0;
     try {
       transaction.begin();
@@ -71,10 +80,8 @@ public class PassiveHttpSinkBlobHandler implements PassiveHttpSinkHandler {
           break;
         }
 
-        if (!responsePrepared) {
+        if (eventSize == 0) {
           setupResponse(response);
-          responsePrepared = true;
-
           if (contentPrefix != null) {
             stream.write(contentPrefix);
           }
@@ -88,17 +95,16 @@ public class PassiveHttpSinkBlobHandler implements PassiveHttpSinkHandler {
         stream.write(event.getBody());
       }
 
+      transaction.commit();
+      counterGroup.addAndGet("events.success", (long) Math.min(batchSize, eventSize));
+      counterGroup.incrementAndGet("transaction.success");
+      LOG.info("{} events to deliver.", eventSize);
+
       if (eventSize > 0) {
         if (contentSurffix != null) {
           stream.write(contentSurffix);
         }
-        transaction.commit();
-        counterGroup.addAndGet("events.success", (long) Math.min(batchSize, eventSize));
-        counterGroup.incrementAndGet("transaction.success");
       } else {
-        transaction.rollback();
-        counterGroup.incrementAndGet("transaction.failed");
-        LOG.warn("No event to deliver.");
         response.sendError(HttpServletResponse.SC_NO_CONTENT, "No event to deliver.");
       }
     } catch (Exception ex) {
@@ -123,11 +129,11 @@ public class PassiveHttpSinkBlobHandler implements PassiveHttpSinkHandler {
     batchSize = context.getInteger(GBase8aSinkConstants.BATCH_SIZE, GBase8aSinkConstants.DFLT_BATCH_SIZE);
     characterEncoding = context.getString(GBase8aSinkConstants.CHARACTER_ENCODING, GBase8aSinkConstants.DFLT_CHARACTER_ENCODING);
     contentType = context.getString(GBase8aSinkConstants.CONTENT_TYPE, GBase8aSinkConstants.DFLT_CONTENT_TYPE);
-
+    
     String prefix = context.getString(GBase8aSinkConstants.CONTENT_PREFIX, GBase8aSinkConstants.DFLT_CONTENT_PREFIX);
     if (!Strings.isNullOrEmpty(prefix)) {
       try {
-        contentPrefix = prefix.getBytes(characterEncoding);
+        contentPrefix = StringEscapeUtils.unescapeJava(prefix).getBytes(characterEncoding);
       } catch (UnsupportedEncodingException e) {
         LOG.error("Invalid contentPrefix", e);
       }
@@ -136,16 +142,16 @@ public class PassiveHttpSinkBlobHandler implements PassiveHttpSinkHandler {
     String surffix = context.getString(GBase8aSinkConstants.CONTENT_SURFFIX, GBase8aSinkConstants.DFLT_CONTENT_SURFFIX);
     if (!Strings.isNullOrEmpty(surffix)) {
       try {
-        contentSurffix = surffix.getBytes(characterEncoding);
+        contentSurffix = StringEscapeUtils.unescapeJava(surffix).getBytes(characterEncoding);
       } catch (UnsupportedEncodingException e) {
         LOG.error("Invalid contentSurffix", e);
       }
     }
-
+    
     String separator = context.getString(GBase8aSinkConstants.CONTENT_SEPARATOR, GBase8aSinkConstants.DFLT_CONTENT_SEPARATOR);
     if (!Strings.isNullOrEmpty(separator)) {
       try {
-        contentSeparator = separator.getBytes(characterEncoding);
+        contentSeparator = StringEscapeUtils.unescapeJava(separator).getBytes(characterEncoding);
       } catch (UnsupportedEncodingException e) {
         LOG.error("Invalid contentSeparator", e);
       }
