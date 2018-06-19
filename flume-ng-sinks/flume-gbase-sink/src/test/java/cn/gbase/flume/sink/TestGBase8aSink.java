@@ -16,7 +16,7 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.apache.flume.sink.gbase;
+package cn.gbase.flume.sink;
 
 import static org.junit.Assert.*;
 
