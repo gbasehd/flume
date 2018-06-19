@@ -73,7 +73,11 @@ import com.google.common.collect.Lists;
  *
  * EventBody: 1:2:3.4foobar5
  *
- * Configuration: agent.sources.r1.interceptors.i1.regex = (\\d):(\\d):(\\d)
+ * Configuration: 
+ * agent.sources.r1.interceptors = il
+ * agent.sources.r1.interceptors.i1.type = HEADER_SPLIT
+ * agent.sources.r1.interceptors.i1.regex = (\\d):(\\d):(\\d)
+ * agent.sources.r1.interceptors.i1.splitKey = NumString
  * <p>
  * agent.sources.r1.interceptors.i1.serializers = s1 s2
  * agent.sources.r1.interceptors.i1.serializers.s1.name = one
@@ -117,8 +121,14 @@ public class HeaderSplitInterceptor implements Interceptor {
 
   @Override
   public Event intercept(Event event) {
-    Matcher matcher = regex.matcher(event.getHeaders().get(splitKey));
     Map<String, String> headers = event.getHeaders();
+    
+    if (!headers.containsKey(splitKey)) {
+      logger.error("{} is not in header", splitKey);
+      return event;
+    }
+    
+    Matcher matcher = regex.matcher(headers.get(splitKey));
     if (matcher.find()) {
       for (int group = 0, count = matcher.groupCount(); group < count; group++) {
         int groupIndex = group + 1;
@@ -131,6 +141,9 @@ public class HeaderSplitInterceptor implements Interceptor {
         }
         headers.put(serializers.get(group),matcher.group(groupIndex));
       }
+    }
+    else {
+    	logger.warn("no mathch any values");
     }
     return event;
   }
