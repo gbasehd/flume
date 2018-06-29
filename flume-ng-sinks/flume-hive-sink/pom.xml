@@ -95,8 +95,6 @@ limitations under the License.
         <dependency>
           <groupId>org.apache.hadoop</groupId>
           <artifactId>hadoop-common</artifactId>
-          <scope>test</scope>
-          <optional>true</optional>
         </dependency>
 
         <dependency>
