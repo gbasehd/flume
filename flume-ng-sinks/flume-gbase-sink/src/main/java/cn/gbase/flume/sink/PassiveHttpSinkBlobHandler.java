@@ -106,6 +106,7 @@ public class PassiveHttpSinkBlobHandler implements PassiveHttpSinkHandler {
       } else {
         response.sendError(HttpServletResponse.SC_NO_CONTENT, "No event to deliver.");
       }
+      stream.close();
     } catch (Exception ex) {
       transaction.rollback();
       counterGroup.incrementAndGet("transaction.failed");
