@@ -330,6 +330,12 @@ public class BucketPath {
         // This is different from unix date (which would insert a tab character
         // here)
         return timestampHeader;
+      case 'x':
+    	formatString = "SSS";
+    	break;
+      case 'X':
+    	formatString = "XXX";
+    	break;
       case 'y':
         formatString = "yy";
         break;

@@ -22,6 +22,7 @@ import com.google.common.base.Preconditions;
 import org.apache.commons.lang.StringUtils;
 import org.apache.flume.Context;
 import org.apache.flume.Event;
+import org.apache.flume.formatter.output.BucketPath;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -75,7 +76,8 @@ public class SearchAndReplaceInterceptor implements Interceptor {
   public Event intercept(Event event) {
     String origBody = new String(event.getBody(), charset);
     Matcher matcher = searchPattern.matcher(origBody);
-    String newBody = matcher.replaceAll(replaceString);
+    String replacement = BucketPath.escapeString(replaceString, event.getHeaders());
+    String newBody = matcher.replaceAll(replacement);
     event.setBody(newBody.getBytes(charset));
     return event;
   }
