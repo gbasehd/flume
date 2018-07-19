@@ -57,6 +57,7 @@ import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.clients.consumer.OffsetAndMetadata;
 import org.apache.kafka.common.PartitionInfo;
 import org.apache.kafka.common.TopicPartition;
+import org.apache.kafka.common.record.TimestampType;
 import org.apache.kafka.common.security.auth.SecurityProtocol;
 import org.apache.kafka.common.security.JaasUtils;
 import kafka.client.ClientUtils;
@@ -293,8 +294,9 @@ public class KafkaSource extends AbstractPollableSource
 
         // Add headers to event (timestamp, topic, partition, key) only if they don't exist
         if (!headers.containsKey(KafkaSourceConstants.TIMESTAMP_HEADER)) {
+          headers.put("timestampType", message.timestampType().toString());
           headers.put(KafkaSourceConstants.TIMESTAMP_HEADER,
-              String.valueOf(System.currentTimeMillis()));
+              String.valueOf(message.timestamp()));
         }
         // Only set the topic header if setTopicHeader and it isn't already populated
         if (setTopicHeader && !headers.containsKey(topicHeader)) {
@@ -368,7 +370,7 @@ public class KafkaSource extends AbstractPollableSource
         return Status.READY;
       }
 
-      return Status.BACKOFF;
+      return Status.READY;
     } catch (Exception e) {
       log.error("KafkaSource EXCEPTION, {}", e);
       return Status.BACKOFF;

@@ -23,6 +23,7 @@ import java.util.Map;
 
 import org.apache.flume.Context;
 import org.apache.flume.Event;
+import org.apache.flume.formatter.output.BucketPath;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -87,7 +88,8 @@ public class StaticInterceptor implements Interceptor {
       return event;
     }
 
-    headers.put(key, value);
+    String replacement = BucketPath.escapeString(value, event.getHeaders());
+    headers.put(key, replacement);
     return event;
   }
 

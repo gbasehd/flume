@@ -331,11 +331,11 @@ public class BucketPath {
         // here)
         return timestampHeader;
       case 'x':
-    	formatString = "SSS";
-    	break;
+        formatString = "SSS";
+        break;
       case 'X':
-    	formatString = "XXX";
-    	break;
+        formatString = "XXX";
+        break;
       case 'y':
         formatString = "yy";
         break;
